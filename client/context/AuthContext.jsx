@@ -61,7 +61,7 @@ const login = async (state, credentials)=>{
         setOnlineUsers([]);
         axios.defaults.headers.common["token"] = null;
         toast.success("Logged out successfully")
-        socket.disconnect();
+        socket?.disconnect();
     }
 
     // Update profile function to handle user profile updates
@@ -89,7 +89,8 @@ const login = async (state, credentials)=>{
         const newSocket = io(backendUrl, {
             query: {
                 userId: userData._id,
-            }
+            },
+            transports: ["websocket", "polling"],
         });
         newSocket.on("connect_error", (err) => {
             console.log("Socket connection status:", err.message);
