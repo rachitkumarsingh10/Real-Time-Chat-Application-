@@ -71,10 +71,15 @@ const login = async (state, credentials)=>{
             const { data } = await axios.put("/api/auth/update-profile", body);
             if(data.success){
                 setAuthUser(data.user);
-                toast.success("Profile updated successfully")
+                toast.success("Profile updated successfully");
+                return true;
+            } else {
+                toast.error(data.message || "Failed to update profile");
+                return false;
             }
         } catch (error) {
-            toast.error(error.message)
+            toast.error(error.response?.data?.message || error.message);
+            return false;
         }
     }
 

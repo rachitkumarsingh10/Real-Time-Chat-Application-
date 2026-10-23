@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import assets from '../assets/assets';
 import { AuthContext } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const ProfilePage = () => {
 
@@ -9,25 +10,65 @@ const ProfilePage = () => {
 
   const [selectedImg, setSelectedImg] = useState(null)
   const navigate = useNavigate();
-  const [name, setName] = useState(authUser.fullName)
-  const [bio, setBio] = useState(authUser.bio)
+  const [name, setName] = useState(authUser?.fullName || "")
+  const [bio, setBio] = useState(authUser?.bio || "")
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  // Compress image before upload to avoid Vercel payload limits
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+          resolve(compressedBase64);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
 
   const handleSubmit = async (e)=>{
     e.preventDefault();
-    if(!selectedImg){
-      await updateProfile({fullName: name, bio});
-      navigate('/');
-      return;
-    }
+    setIsUpdating(true);
+    try {
+      if(!selectedImg){
+        const success = await updateProfile({fullName: name, bio});
+        if(success) navigate('/');
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(selectedImg);
-    reader.onload = async ()=>{
-      const base64Image = reader.result;
-      await updateProfile({profilePic: base64Image, fullName: name, bio});
-      navigate('/');
+      const base64Image = await compressImage(selectedImg);
+      const success = await updateProfile({profilePic: base64Image, fullName: name, bio});
+      if(success) {
+        navigate('/');
+      }
+    } catch (err) {
+      toast.error("Error processing image: " + err.message);
+    } finally {
+      setIsUpdating(false);
     }
-    
   }
 
   return (
@@ -36,19 +77,41 @@ const ProfilePage = () => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-10 flex-1">
           <h3 className="text-lg">Profile details</h3>
           <label htmlFor="avatar" className='flex items-center gap-3 cursor-pointer'>
-            <input onChange={(e)=>setSelectedImg(e.target.files[0])} type="file" id='avatar' accept='.png, .jpg, .jpeg' hidden/>
-            <img src={selectedImg ? URL.createObjectURL(selectedImg) : assets.avatar_icon} alt="" className={`w-12 h-12 ${selectedImg && 'rounded-full'}`}/>
+            <input 
+              onChange={(e)=>{
+                if(e.target.files && e.target.files[0]){
+                  setSelectedImg(e.target.files[0]);
+                }
+              }} 
+              type="file" 
+              id='avatar' 
+              accept='.png, .jpg, .jpeg' 
+              hidden
+            />
+            <img 
+              src={selectedImg ? URL.createObjectURL(selectedImg) : (authUser?.profilePic || assets.avatar_icon)} 
+              alt="" 
+              className='w-12 h-12 rounded-full object-cover border border-violet-500'
+            />
             upload profile image
           </label>
           <input onChange={(e)=>setName(e.target.value)} value={name}
            type="text" required placeholder='Your name' className='p-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500'/>
            <textarea onChange={(e)=>setBio(e.target.value)} value={bio} placeholder="Write profile bio" required className="p-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500" rows={4}></textarea>
 
-           <button type="submit" className="bg-gradient-to-r from-purple-400 to-violet-600 text-white p-2 rounded-full text-lg cursor-pointer">Save</button>
+           <button 
+             type="submit" 
+             disabled={isUpdating}
+             className={`bg-gradient-to-r from-purple-400 to-violet-600 text-white p-2 rounded-full text-lg cursor-pointer transition-opacity ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}>
+             {isUpdating ? "Saving..." : "Save"}
+           </button>
         </form>
-        <img className={`max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 ${selectedImg && 'rounded-full'}`} src={authUser?.profilePic || assets.logo_icon} alt="" />
+        <img 
+          className='max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 object-cover border-2 border-violet-500' 
+          src={selectedImg ? URL.createObjectURL(selectedImg) : (authUser?.profilePic || assets.logo_icon)} 
+          alt="" 
+        />
       </div>
-     
     </div>
   )
 }

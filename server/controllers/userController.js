@@ -69,13 +69,22 @@ export const updateProfile = async (req, res)=>{
         if(!profilePic){
             updatedUser = await User.findByIdAndUpdate(userId, {bio, fullName}, {new: true});
         } else{
-            const upload = await cloudinary.uploader.upload(profilePic);
+            if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_SECRET) {
+                return res.json({ 
+                    success: false, 
+                    message: "Cloudinary credentials missing in server environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)" 
+                });
+            }
+
+            const upload = await cloudinary.uploader.upload(profilePic, {
+                folder: "quickchat_profiles"
+            });
 
             updatedUser = await User.findByIdAndUpdate(userId, {profilePic: upload.secure_url, bio, fullName}, {new: true});
         }
         res.json({success: true, user: updatedUser})
     } catch (error) {
-        console.log(error.message);
+        console.log("Update profile error:", error.message);
         res.json({success: false, message: error.message})
     }
 }
