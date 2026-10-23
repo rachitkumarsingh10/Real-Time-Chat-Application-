@@ -19,14 +19,33 @@ const RightSidebar = () => {
   return selectedUser && (
     <div className={`bg-[#8185B2]/10 text-white w-full relative overflow-y-scroll ${selectedUser ? "max-md:hidden" : ""}`}>
 
-        <div className='pt-16 flex flex-col items-center gap-2 text-xs font-light mx-auto'>
-            <img src={selectedUser?.profilePic || assets.avatar_icon} alt=""
-            className='w-20 aspect-[1/1] rounded-full' />
-            <h1 className='px-10 text-xl font-medium mx-auto flex items-center gap-2'>
-                {onlineUsers.includes(selectedUser._id) && <p className='w-2 h-2 rounded-full bg-green-500'></p>}
+        <div className='pt-16 flex flex-col items-center gap-2 text-xs font-light mx-auto text-center'>
+            <div className="relative">
+                <img src={selectedUser?.profilePic || assets.avatar_icon} alt=""
+                className={`w-20 aspect-[1/1] rounded-full object-cover ${selectedUser.isBot ? 'p-1 bg-gradient-to-tr from-violet-500 to-cyan-400' : ''}`} />
+                {(selectedUser.isBot || onlineUsers.includes(selectedUser._id)) && (
+                    <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 absolute bottom-0 right-1 border-2 border-[#1a142e]"></span>
+                )}
+            </div>
+            <h1 className='px-10 text-xl font-medium mx-auto flex items-center justify-center gap-2'>
                 {selectedUser.fullName}
+                {selectedUser.isBot && (
+                    <span className='text-[10px] uppercase font-bold bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-2 py-0.5 rounded-full shadow-sm'>
+                        AI
+                    </span>
+                )}
             </h1>
-            <p className='px-10 mx-auto'>{selectedUser.bio}</p>
+            <p className='px-6 mx-auto text-gray-300'>{selectedUser.bio}</p>
+
+            {selectedUser.isBot && (
+                <div className="mt-3 px-6 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[11px] text-gray-300 max-w-[240px] text-left space-y-1">
+                    <div className="text-cyan-300 font-medium">✨ Capabilities:</div>
+                    <div>• Instant question answering</div>
+                    <div>• Code explanation & debugging</div>
+                    <div>• Image & vision recognition</div>
+                    <div>• Powered by Gemini 2.5 Flash</div>
+                </div>
+            )}
         </div>
 
         <hr className="border-[#ffffff50] my-4"/>

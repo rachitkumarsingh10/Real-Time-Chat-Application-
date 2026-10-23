@@ -11,6 +11,7 @@ export const ChatProvider = ({ children })=>{
     const [users, setUsers] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null)
     const [unseenMessages, setUnseenMessages] = useState({})
+    const [isBotTyping, setIsBotTyping] = useState(false)
 
     const {socket, axios} = useContext(AuthContext);
 
@@ -42,14 +43,34 @@ export const ChatProvider = ({ children })=>{
     // function to send message to selected user
     const sendMessage = async (messageData)=>{
         try {
-            const {data} = await axios.post(`/api/messages/send/${selectedUser._id}`, messageData);
+            if (selectedUser?.isBot) {
+                setIsBotTyping(true);
+            }
+
+            const customApiKey = localStorage.getItem("gemini_api_key");
+            const headers = customApiKey ? { "x-gemini-key": customApiKey } : {};
+
+            const {data} = await axios.post(`/api/messages/send/${selectedUser._id}`, messageData, { headers });
             if(data.success){
-                setMessages((prevMessages)=>[...prevMessages, data.newMessage])
+                setMessages((prevMessages) => {
+                    let updated = prevMessages.some(m => m._id === data.newMessage._id)
+                        ? prevMessages
+                        : [...prevMessages, data.newMessage];
+
+                    if (data.botMessage && !updated.some(m => m._id === data.botMessage._id)) {
+                        updated = [...updated, data.botMessage];
+                    }
+                    return updated;
+                });
             }else{
                 toast.error(data.message);
             }
         } catch (error) {
             toast.error(error.message);
+        } finally {
+            if (selectedUser?.isBot) {
+                setIsBotTyping(false);
+            }
         }
     }
 
@@ -58,21 +79,31 @@ export const ChatProvider = ({ children })=>{
         if(!socket) return;
 
         socket.on("newMessage", (newMessage)=>{
-            if(selectedUser && newMessage.senderId === selectedUser._id){
+            if(selectedUser && (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)){
                 newMessage.seen = true;
-                setMessages((prevMessages)=> [...prevMessages, newMessage]);
+                setMessages((prevMessages) => {
+                    if (prevMessages.some(m => m._id === newMessage._id)) return prevMessages;
+                    return [...prevMessages, newMessage];
+                });
                 axios.put(`/api/messages/mark/${newMessage._id}`);
             }else{
                 setUnseenMessages((prevUnseenMessages)=>({
                     ...prevUnseenMessages, [newMessage.senderId] : prevUnseenMessages[newMessage.senderId] ? prevUnseenMessages[newMessage.senderId] + 1 : 1
                 }))
             }
-        })
+        });
+
+        socket.on("botTyping", (typingState) => {
+            setIsBotTyping(Boolean(typingState));
+        });
     }
 
     // function to unsubscribe from messages
     const unsubscribeFromMessages = ()=>{
-        if(socket) socket.off("newMessage");
+        if(socket) {
+            socket.off("newMessage");
+            socket.off("botTyping");
+        }
     }
 
     useEffect(()=>{
@@ -81,7 +112,7 @@ export const ChatProvider = ({ children })=>{
     },[socket, selectedUser])
 
     const value = {
-        messages, users, selectedUser, getUsers, getMessages, sendMessage, setSelectedUser, unseenMessages, setUnseenMessages
+        messages, users, selectedUser, getUsers, getMessages, sendMessage, setSelectedUser, unseenMessages, setUnseenMessages, isBotTyping, setIsBotTyping
     }
 
     return (

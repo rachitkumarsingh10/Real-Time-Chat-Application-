@@ -43,20 +43,47 @@ const Sidebar = () => {
 
       </div>
 
-    <div className='flex flex-col'>
+    <div className='flex flex-col gap-1'>
         {filteredUsers.map((user, index)=>(
             <div onClick={()=> {setSelectedUser(user); setUnseenMessages(prev=> ({...prev, [user._id]:0}))}}
-             key={index} className={`relative flex items-center gap-2 p-2 pl-4 rounded cursor-pointer max-sm:text-sm ${selectedUser?._id === user._id && 'bg-[#282142]/50'}`}>
-                <img src={user?.profilePic || assets.avatar_icon} alt="" className='w-[35px] aspect-[1/1] rounded-full'/>
-                <div className='flex flex-col leading-5'>
-                    <p>{user.fullName}</p>
+             key={index} className={`relative flex items-center gap-2.5 p-2.5 pl-4 rounded-lg cursor-pointer transition-all max-sm:text-sm ${
+                selectedUser?._id === user._id 
+                    ? 'bg-[#282142]/80 shadow-sm border border-violet-500/30' 
+                    : user.isBot 
+                    ? 'bg-gradient-to-r from-violet-600/15 to-indigo-600/10 hover:bg-violet-600/25 border border-violet-500/20' 
+                    : 'hover:bg-[#282142]/30'
+            }`}>
+                <div className="relative">
+                    <img src={user?.profilePic || assets.avatar_icon} alt="" className={`w-[38px] aspect-[1/1] rounded-full object-cover ${user.isBot ? 'p-0.5 bg-gradient-to-tr from-violet-500 to-cyan-400' : ''}`}/>
+                    {user.isBot ? (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-cyan-400 border-2 border-[#1a142e] rounded-full"></span>
+                    ) : onlineUsers.includes(user._id) ? (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#1a142e] rounded-full"></span>
+                    ) : null}
+                </div>
+                <div className='flex flex-col leading-5 flex-1 min-w-0'>
+                    <div className='flex items-center gap-1.5'>
+                        <p className='font-medium truncate'>{user.fullName}</p>
+                        {user.isBot && (
+                            <span className='text-[10px] uppercase tracking-wider font-semibold bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-1.5 py-0.2 rounded-full shadow-sm'>
+                                AI
+                            </span>
+                        )}
+                    </div>
                     {
-                        onlineUsers.includes(user._id)
-                        ? <span className='text-green-400 text-xs'>Online</span>
-                        : <span className='text-neutral-400 text-xs'>Offline</span>
+                        user.isBot ? (
+                            <span className='text-cyan-300 text-xs flex items-center gap-1'>
+                                <span className='inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse'></span>
+                                Gemini 2.5 • Ready
+                            </span>
+                        ) : onlineUsers.includes(user._id) ? (
+                            <span className='text-green-400 text-xs'>Online</span>
+                        ) : (
+                            <span className='text-neutral-400 text-xs'>Offline</span>
+                        )
                     }
                 </div>
-                {unseenMessages[user._id] > 0 && <p className='absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-violet-500/50'>{unseenMessages[user._id]}</p>}
+                {unseenMessages[user._id] > 0 && <p className='absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-violet-500 text-white font-medium'>{unseenMessages[user._id]}</p>}
             </div>
         ) )}
     </div>
