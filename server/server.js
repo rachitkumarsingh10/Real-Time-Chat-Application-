@@ -11,10 +11,10 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 
-// Allowed origins configuration from environment or defaults
+// Allowed origins configuration from environment or defaults (including your exact Vercel frontend)
 const allowedOrigins = process.env.CLIENT_URL
-    ? process.env.CLIENT_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
-    : [];
+    ? [...process.env.CLIENT_URL.split(",").map((url) => url.trim().replace(/\/$/, "")), "https://chat-app-navy-three-62.vercel.app"]
+    : ["https://chat-app-navy-three-62.vercel.app"];
 
 const corsOptions = {
     origin: (origin, callback) => {
@@ -29,7 +29,8 @@ const corsOptions = {
         const normalizedOrigin = origin.replace(/\/$/, "");
         if (
             allowedOrigins.includes(normalizedOrigin) ||
-            normalizedOrigin.endsWith(".vercel.app")
+            normalizedOrigin.endsWith(".vercel.app") ||
+            normalizedOrigin === "https://chat-app-navy-three-62.vercel.app"
         ) {
             return callback(null, true);
         }
